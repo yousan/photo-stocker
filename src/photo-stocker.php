@@ -21,7 +21,7 @@ Class PhotoStocker {
 		if ( !isset($exifdata["EXIF"]['DateTimeOriginal']) ) {
 			return;
 		}
-		$date = DateTimeImmutable::createFromFormat('Y:m:d H:i:s', $exifdata["EXIF"]['DateTimeOriginal'];);
+		$date = DateTimeImmutable::createFromFormat('Y:m:d H:i:s', $exifdata["EXIF"]['DateTimeOriginal']);
 		$year = $date->format('Y');
 		$month = $date->format('m');
 		$destdir = self::$destbasedir . '/' . $year . '/' . $month . '/';
