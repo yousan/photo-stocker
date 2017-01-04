@@ -12,6 +12,24 @@ Class PhotoStocker {
 	private static $dirmode = 0755;
 
 	/**
+	 * 年フォルダにファイルタイプ(jpg, raw)をつけるかどうか
+	 * true => 2016_jpg, false => 2016
+	 *
+	 * @var bool
+	 */
+	private static $yeardir_with_filetype = true;
+
+	/**
+	 * 年フォルダにファイルタイプ(jpg, raw)をつけるかどうか
+	 * true => 201612_jpg, false => 201612
+	 *
+	 * @var bool
+	 */
+	private static $monthdir_with_filetype = true;
+
+	const date_format = 'Y-m-d H:i:s';
+
+	/**
 	 * 移動対象とするファイル名のパターン。
 	 * デフォルトは.jpeg, .jpgで大文字小文字を判定しない。
 	 *
@@ -24,7 +42,7 @@ Class PhotoStocker {
 	 *
 	 * @var string
 	 */
-	private static $filename_pattern_orf = '/.(orf)$/i';
+	private static $filename_pattern_raw = '/.(orf)$/i';
 
 	public static function stock() {
 		foreach ( scandir(self::$sourcedir) as $filename ) {
@@ -42,8 +60,8 @@ Class PhotoStocker {
 	 * @param $sourcefile
 	 */
 	private static function move_file($sourcefile) {
-		var_dump(ini_set('date.timezone', 'Asia/Tokyo'));
-		var_dump(ini_get('date.timezone'));
+		//var_dump(ini_set('date.timezone', 'Asia/Tokyo'));
+		//var_dump(ini_get('date.timezone'));
 		if ( preg_match(self::$filename_pattern_jpg, $sourcefile) ) {
 			$filetype = 'jpg';
 			$exifdata = exif_read_data($sourcefile, 0, true); // EXIF情報を読み込む
@@ -52,25 +70,26 @@ Class PhotoStocker {
 			} else {
 				return;
 			}
-		} else if ( preg_match(self::$filename_pattern_orf, $sourcefile) ) {
-			$filetype = 'orf';
-			var_dump($dtz = new DateTimeZone('Asia/Tokyo'));
+		} else if ( preg_match(self::$filename_pattern_raw, $sourcefile) ) {
+			$filetype = 'raw';
 			if ( $unixtime = filemtime($sourcefile) ) {
-				var_dump($unixtime);
-				var_dump(date('Y-m-d H:i:s', $unixtime));
-				$date = DateTimeImmutable::createFromFormat( 'U', $unixtime, $dtz
-				);
+				// thanks @do_aki
+				$date = DateTimeImmutable::createFromFormat( self::date_format, date(self::date_format, $unixtime));
 			} else {
 				return;
 			}
 		} else {
 			return; // 拡張子が一致しない場合には何もしない
 		}
+		var_dump($date->format(self::date_format));
 
-		var_dump($date->format('Y-m-d H:i:s'));
-		var_dump($filetype);
-		$year = $date->format('Y'); // 年 ex. 2016
-		$yearmonth = $date->format('Ym'); // 年月 ex. 201612
+		$year = self::$yeardir_with_filetype
+			? $date->format( 'Y' ) . '_' . $filetype // 2016_jpg
+			: $date->format( 'Y' );                  // 2016
+
+		$yearmonth = self::$monthdir_with_filetype
+			? $date->format('Ym') . '_' . $filetype // 201612_jpg
+			: $date->format('Ym');                  // 201612
 
 		$destdir = self::$destbasedir . '/' . $year . '/' . $yearmonth . '/';
 		$destfile = $destdir . basename($sourcefile);
@@ -82,7 +101,7 @@ Class PhotoStocker {
 		if ( file_exists($destfile) ) {
 			echo 'File already exists: '. $destfile . PHP_EOL;
 		} else {
-			//rename($sourcefile, $destfile);
+			rename($sourcefile, $destfile);
 		}
 	}
 }
